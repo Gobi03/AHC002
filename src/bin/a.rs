@@ -103,22 +103,68 @@ struct Input {
 struct Output {
     input: Input,
     rng: ThreadRng,
+}
+
+impl Output {
+    fn new(input: Input) -> Output {
+        let rng = rand::thread_rng();
+        Output { input, rng }
+    }
+
+    fn solve(&self) -> String {
+        let first_st = State::new(&self.input);
+        let mut reprs = vec![first_st];
+
+        let mut ans = String::from("");
+        let mut best_score = 0;
+
+        const BEAM_WIDTH: usize = 2000;
+
+        while !reprs.is_empty() {
+            if best_score < reprs[0].score {
+                best_score = reprs[0].score;
+                ans = reprs[0].ans.iter().collect::<String>();
+            }
+
+            let mut next_reprs = vec![];
+
+            for i in 0..min(BEAM_WIDTH, reprs.len()) {
+                let st = &reprs[i];
+                for &c in COMS.iter() {
+                    let next = st.pos.move_by(c);
+                    if next.in_field() {
+                        if !st.is_gone_pos(&next, &self.input) {
+                            let mut next_st = st.clone();
+                            next_st.do_command(c, &self.input);
+                            next_reprs.push(next_st);
+                        }
+                    }
+                }
+            }
+
+            next_reprs.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
+            reprs = next_reprs;
+        }
+
+        ans
+    }
+}
+
+#[derive(Clone)]
+struct State {
     pos: Coord,
     score: isize,
     gone: Vec<bool>,
     ans: Vec<char>,
 }
 
-impl Output {
-    fn new(input: Input) -> Output {
+impl State {
+    fn new(input: &Input) -> Self {
         let start = input.start;
         let mut gone = vec![false; SIDE * SIDE];
         gone[*start.access_matrix(&input.tiles)] = true;
         let score = *start.access_matrix(&input.points);
-        let rng = rand::thread_rng();
-        Output {
-            input,
-            rng,
+        State {
             pos: start,
             score,
             gone,
@@ -126,40 +172,19 @@ impl Output {
         }
     }
 
-    fn is_gone_pos(&self, pos: &Coord) -> bool {
-        let tile = pos.access_matrix(&self.input.tiles);
+    fn is_gone_pos(&self, pos: &Coord, input: &Input) -> bool {
+        let tile = pos.access_matrix(&input.tiles);
         self.gone[*tile]
     }
 
     // valid な命令である前提
-    fn do_command(&mut self, com: char) {
+    fn do_command(&mut self, com: char, input: &Input) {
         self.ans.push(com);
         self.pos = self.pos.move_by(com);
-        self.score += self.pos.access_matrix(&self.input.points);
+        self.score += self.pos.access_matrix(&input.points);
         // goneを埋める
-        let tile = self.pos.access_matrix(&self.input.tiles);
+        let tile = self.pos.access_matrix(&input.tiles);
         self.gone[*tile] = true;
-    }
-
-    fn solve(&mut self) {
-        loop {
-            let mut coms = COMS.to_vec();
-            coms.shuffle(&mut self.rng);
-            let mut flag = false;
-            for c in coms {
-                let next = self.pos.move_by(c);
-                if next.in_field() {
-                    if !self.is_gone_pos(&next) {
-                        flag = true;
-                        self.do_command(c);
-                    }
-                }
-            }
-
-            if !flag {
-                break;
-            }
-        }
     }
 }
 
@@ -183,9 +208,9 @@ fn main() {
 
     let mut output = Output::new(input);
 
-    output.solve();
+    let ans = output.solve();
 
-    println!("{}", output.ans.iter().collect::<String>());
+    println!("{}", ans);
 
     eprintln!("{}ms", system_time.elapsed().unwrap().as_millis());
 }
