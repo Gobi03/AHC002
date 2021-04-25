@@ -7,6 +7,7 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 
+#[allow(unused_imports)]
 use rand::{thread_rng, Rng};
 use std::time::SystemTime;
 
@@ -82,20 +83,58 @@ impl Coord {
     }
 }
 
+#[allow(dead_code)]
+struct Input {
+    start: Coord,
+    tiles: Vec<Vec<usize>>,  // タイルナンバー
+    points: Vec<Vec<isize>>, // points
+}
+
+struct Output {
+    input: Input,
+    pos: Coord,
+    score: isize,
+    gone: Vec<bool>,
+}
+
+impl Output {
+    fn new(input: Input) -> Output {
+        let start = input.start;
+        let mut gone = vec![false; SIDE * SIDE];
+        gone[*start.access_matrix(&input.tiles)] = true;
+        let score = *start.access_matrix(&input.points);
+        Output {
+            input,
+            pos: start,
+            score,
+            gone,
+        }
+    }
+}
+
 #[fastout]
 fn main() {
     let system_time = SystemTime::now();
 
     input! {
-        si: usize,
-        sj: usize,
-        t: [[isize; SIDE]; SIDE],
-        p: [[isize; SIDE]; SIDE],
+        sy: usize,
+        sx: usize,
+        tiles: [[usize; SIDE]; SIDE],
+        points: [[isize; SIDE]; SIDE],
     }
 
-    let ans = "D";
+    let start = Coord::new((sx, sy));
+    let input = Input {
+        start,
+        tiles,
+        points,
+    };
+
+    let output = Output::new(input);
+
+    let ans = "";
 
     println!("{}", ans);
 
-    println!("{}ms", system_time.elapsed().unwrap().as_millis());
+    eprintln!("{}ms", system_time.elapsed().unwrap().as_millis());
 }
