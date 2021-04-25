@@ -19,6 +19,7 @@ const MOD: usize = 1e9 as usize + 7;
 
 const SIDE: usize = 50;
 const COMS: [char; 4] = ['U', 'D', 'L', 'R'];
+const DIV: isize = 10;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Coord {
@@ -94,14 +95,20 @@ impl Coord {
     }
 
     fn block_coord(&self) -> Coord {
-        Coord::new((self.x / 5, self.y / 5))
+        Coord::new((self.x / DIV, self.y / DIV))
     }
 
     fn next_block(&self) -> Coord {
         // Coord::new((x, y))
         let &Coord { x, y } = self;
-        if y == 0 {
-            if x == (SIDE / 5 - 1) as isize {
+        if x == (SIDE as isize / DIV - 1) && y >= 2 {
+            if y == (SIDE as isize / DIV - 1) {
+                Coord::new((x, y + 1))
+            } else {
+                Coord::new((x - 1, y))
+            }
+        } else if y == 0 {
+            if x == (SIDE as isize / DIV - 1) {
                 Coord::new((x, y + 1))
             } else {
                 Coord::new((x + 1, y))
@@ -110,7 +117,7 @@ impl Coord {
             if x == 0 && y == 1 {
                 Coord::new((x, y - 1))
             } else {
-                if (y == 1 && x % 2 == 0) || (y == (SIDE / 5 - 1) as isize && x % 2 == 1) {
+                if (y == 1 && x % 2 == 0) || (y == SIDE as isize / DIV - 1 && x % 2 == 1) {
                     Coord::new((x - 1, y))
                 } else {
                     if x % 2 == 0 {
@@ -149,10 +156,9 @@ impl Output {
         let mut ans = String::from("");
         let mut best_score = 0;
 
-        const BEAM_WIDTH: usize = 1000;
+        const BEAM_WIDTH: usize = 500;
 
         while !reprs.is_empty() {
-            eprintln!("test");
             let top = &reprs[0];
             if best_score < top.score {
                 best_score = top.score;
@@ -161,7 +167,6 @@ impl Output {
 
             let block = top.pos.block_coord();
             let next_block = block.next_block();
-            eprintln!("{:+?} {:+?}", block, next_block);
 
             let mut next_reprs = vec![];
 
@@ -190,8 +195,6 @@ impl Output {
                 local_next_reprs.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
                 local_reprs = local_next_reprs;
             }
-
-            eprintln!("{} {}", local_reprs.len(), next_reprs.len());
 
             next_reprs.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
             reprs = next_reprs;
