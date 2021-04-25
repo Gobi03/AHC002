@@ -99,16 +99,27 @@ impl Coord {
     }
 
     fn next_block(&self) -> Coord {
+        let end = SIDE as isize / DIV - 1;
         // Coord::new((x, y))
         let &Coord { x, y } = self;
-        if x == (SIDE as isize / DIV - 1) && y >= 2 {
-            if y == (SIDE as isize / DIV - 1) {
+        if x == end {
+            if y == end {
+                Coord::new((x - 1, y))
+            } else if y % 2 == 0 {
                 Coord::new((x, y + 1))
             } else {
                 Coord::new((x - 1, y))
             }
+        } else if x == end - 1 {
+            if y == end {
+                Coord::new((x - 1, y))
+            } else if y % 2 == 0 {
+                Coord::new((x + 1, y))
+            } else {
+                Coord::new((x, y + 1))
+            }
         } else if y == 0 {
-            if x == (SIDE as isize / DIV - 1) {
+            if x == end {
                 Coord::new((x, y + 1))
             } else {
                 Coord::new((x + 1, y))
@@ -117,7 +128,7 @@ impl Coord {
             if x == 0 && y == 1 {
                 Coord::new((x, y - 1))
             } else {
-                if (y == 1 && x % 2 == 0) || (y == SIDE as isize / DIV - 1 && x % 2 == 1) {
+                if (y == 1 && x % 2 == 0) || (y == end && x % 2 == 1) {
                     Coord::new((x - 1, y))
                 } else {
                     if x % 2 == 0 {
