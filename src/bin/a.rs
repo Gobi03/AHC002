@@ -162,12 +162,17 @@ impl Output {
     }
 
     fn solve(&self) -> String {
+        let start_block = self.input.start.block_coord();
+        let end_block = Coord::new((SIDE as isize / DIV - 1, SIDE as isize / DIV - 1));
+        let super_block = Coord::new((SIDE as isize / DIV - 1 - 1, SIDE as isize / DIV - 1));
+        let a = start_block != end_block;
+
         let mut reprs = vec![State::new(&self.input)];
 
         let mut ans = String::from("");
         let mut best_score = 0;
 
-        const BEAM_WIDTH: usize = 500;
+        const BEAM_WIDTH: usize = 1500;
 
         while !reprs.is_empty() {
             let top = &reprs[0];
@@ -198,6 +203,11 @@ impl Output {
                                 if next_st.pos.block_coord() == next_block {
                                     next_reprs.push(next_st);
                                 } else if next_st.pos.block_coord() == block {
+                                    local_next_reprs.push(next_st);
+                                } else if a
+                                    && block == super_block
+                                    && next_st.pos.block_coord() == end_block
+                                {
                                     local_next_reprs.push(next_st);
                                 }
                             }
