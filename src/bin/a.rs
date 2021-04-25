@@ -160,10 +160,6 @@ impl Output {
 
         while !reprs.is_empty() {
             let top = &reprs[0];
-            if best_score < top.score {
-                best_score = top.score;
-                ans = top.ans.iter().collect::<String>();
-            }
 
             let block = top.pos.block_coord();
             let next_block = block.next_block();
@@ -172,6 +168,11 @@ impl Output {
 
             let mut local_reprs = reprs.clone();
             while !local_reprs.is_empty() {
+                let top = &local_reprs[0];
+                if best_score < top.score {
+                    best_score = top.score;
+                    ans = top.ans.iter().collect::<String>();
+                }
                 //eprintln!("{}", local_reprs.len());
                 let mut local_next_reprs = vec![];
                 for i in 0..min(BEAM_WIDTH, local_reprs.len()) {
