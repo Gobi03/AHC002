@@ -8,6 +8,7 @@ use std::cmp::*;
 use std::collections::*;
 
 use rand::rngs::ThreadRng;
+#[allow(unused_imports)]
 use rand::seq::SliceRandom;
 #[allow(unused_imports)]
 use rand::{thread_rng, Rng};
@@ -91,6 +92,36 @@ impl Coord {
         let delta = Coord::com_to_delta(c);
         self.plus(&delta)
     }
+
+    fn block_coord(&self) -> Coord {
+        Coord::new((self.x / 5, self.y / 5))
+    }
+
+    fn next_block(&self) -> Coord {
+        // Coord::new((x, y))
+        let &Coord { x, y } = self;
+        if y == 0 {
+            if x == (SIDE / 5 - 1) as isize {
+                Coord::new((x, y + 1))
+            } else {
+                Coord::new((x + 1, y))
+            }
+        } else {
+            if x == 0 && y == 1 {
+                Coord::new((x, y - 1))
+            } else {
+                if (y == 1 && x % 2 == 0) || (y == (SIDE / 5 - 1) as isize && x % 2 == 1) {
+                    Coord::new((x - 1, y))
+                } else {
+                    if x % 2 == 0 {
+                        Coord::new((x, y - 1))
+                    } else {
+                        Coord::new((x, y + 1))
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -100,6 +131,7 @@ struct Input {
     points: Vec<Vec<isize>>, // points
 }
 
+#[allow(dead_code)]
 struct Output {
     input: Input,
     rng: ThreadRng,
@@ -112,35 +144,54 @@ impl Output {
     }
 
     fn solve(&self) -> String {
-        let first_st = State::new(&self.input);
-        let mut reprs = vec![first_st];
+        let mut reprs = vec![State::new(&self.input)];
 
         let mut ans = String::from("");
         let mut best_score = 0;
 
-        const BEAM_WIDTH: usize = 2000;
+        const BEAM_WIDTH: usize = 1000;
 
         while !reprs.is_empty() {
-            if best_score < reprs[0].score {
-                best_score = reprs[0].score;
-                ans = reprs[0].ans.iter().collect::<String>();
+            eprintln!("test");
+            let top = &reprs[0];
+            if best_score < top.score {
+                best_score = top.score;
+                ans = top.ans.iter().collect::<String>();
             }
+
+            let block = top.pos.block_coord();
+            let next_block = block.next_block();
+            eprintln!("{:+?} {:+?}", block, next_block);
 
             let mut next_reprs = vec![];
 
-            for i in 0..min(BEAM_WIDTH, reprs.len()) {
-                let st = &reprs[i];
-                for &c in COMS.iter() {
-                    let next = st.pos.move_by(c);
-                    if next.in_field() {
-                        if !st.is_gone_pos(&next, &self.input) {
-                            let mut next_st = st.clone();
-                            next_st.do_command(c, &self.input);
-                            next_reprs.push(next_st);
+            let mut local_reprs = reprs.clone();
+            while !local_reprs.is_empty() {
+                //eprintln!("{}", local_reprs.len());
+                let mut local_next_reprs = vec![];
+                for i in 0..min(BEAM_WIDTH, local_reprs.len()) {
+                    let st = &local_reprs[i];
+                    for &c in COMS.iter() {
+                        let next = st.pos.move_by(c);
+                        if next.in_field() {
+                            if !st.is_gone_pos(&next, &self.input) {
+                                let mut next_st = st.clone();
+                                next_st.do_command(c, &self.input);
+
+                                if next_st.pos.block_coord() == next_block {
+                                    next_reprs.push(next_st);
+                                } else if next_st.pos.block_coord() == block {
+                                    local_next_reprs.push(next_st);
+                                }
+                            }
                         }
                     }
                 }
+                local_next_reprs.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
+                local_reprs = local_next_reprs;
             }
+
+            eprintln!("{} {}", local_reprs.len(), next_reprs.len());
 
             next_reprs.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
             reprs = next_reprs;
@@ -206,7 +257,7 @@ fn main() {
         points,
     };
 
-    let mut output = Output::new(input);
+    let output = Output::new(input);
 
     let ans = output.solve();
 
