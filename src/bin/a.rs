@@ -173,12 +173,14 @@ impl Output {
         let mut ans = String::from("");
         let mut best_score = 0;
 
-        const BEAM_WIDTH: usize = 1000;
+        const BEAM_WIDTH: usize = 1200;
 
         while !reprs.is_empty() {
             let top = &reprs[0];
+            let mut already = vec![vec![false; DIV as usize]; DIV as usize];
 
             let block = top.pos.block_coord();
+            already[block.y as usize][block.x as usize] = true;
             let next_block = block.next_block();
 
             let mut next_reprs = vec![];
@@ -201,9 +203,10 @@ impl Output {
                                 let mut next_st = st.clone();
                                 next_st.do_command(c, &self.input);
 
-                                if next_st.pos.block_coord() == next_block {
+                                let next_stbc = next_st.pos.block_coord();
+                                if next_stbc == next_block {
                                     next_reprs.push(next_st);
-                                } else if next_st.pos.block_coord() == block {
+                                } else if already[next_stbc.y as usize][next_stbc.x as usize] {
                                     local_next_reprs.push(next_st);
                                 } else if a
                                     && (block == super_block1 || block == super_block2)
