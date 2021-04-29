@@ -20,6 +20,8 @@ const MOD: usize = 1e9 as usize + 7;
 const SIDE: usize = 50;
 const COMS: [char; 4] = ['U', 'D', 'L', 'R'];
 const DIV: isize = 10;
+const W: isize = SIDE as isize;
+const H: isize = SIDE as isize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Coord {
@@ -34,12 +36,12 @@ impl Coord {
     }
 
     fn in_field(&self) -> bool {
-        (0 <= self.x && self.x < SIDE as isize) && (0 <= self.y && self.y < SIDE as isize)
+        (0 <= self.x && self.x < W) && (0 <= self.y && self.y < H)
     }
 
     // ペアへの変換
     fn to_pair(&self) -> (isize, isize) {
-        (self.x as isize, self.y as isize)
+        (self.x, self.y)
     }
 
     // マンハッタン距離
@@ -55,9 +57,8 @@ impl Coord {
 
         delta
             .iter()
-            .map(|&(dx, dy)| (ix + dx, iy + dy))
-            .map(|p| Coord::new(p))
-            .filter(|&p| p.in_field())
+            .map(|&p| self.plus(&Coord::new(p)))
+            .filter(|&pos| pos.in_field())
             .collect()
     }
 
