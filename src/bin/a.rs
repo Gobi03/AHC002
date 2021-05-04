@@ -14,6 +14,9 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use std::time::SystemTime;
 
+use std::fs;
+use std::io::Write;
+
 #[allow(dead_code)]
 const MOD: usize = 1e9 as usize + 7;
 
@@ -22,9 +25,6 @@ const COMS: [char; 4] = ['U', 'D', 'L', 'R'];
 const DIV: isize = 10;
 const W: isize = SIDE as isize;
 const H: isize = SIDE as isize;
-
-const BEGIN: &str = "-----BEGIN-----";
-const END: &str = "-----END-----";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Coord {
@@ -178,7 +178,11 @@ impl Output {
 
         const BEAM_WIDTH: usize = 1200;
 
+        let mut loop_cnt = 0;
+
         while !reprs.is_empty() {
+            loop_cnt += 1;
+
             let top = &reprs[0];
             let mut already = vec![vec![false; DIV as usize]; DIV as usize];
 
@@ -227,8 +231,12 @@ impl Output {
 
             next_reprs.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
             reprs = next_reprs;
+
+            let mut f = fs::File::create(format!("tools/output/{}.txt", loop_cnt)).unwrap();
+            f.write_all(ans.as_bytes()).unwrap();
         }
 
+        eprintln!("file num: {}", loop_cnt);
         ans
     }
 }
@@ -295,8 +303,5 @@ fn main() {
 
     println!("{}", ans);
 
-    eprintln!("{}", BEGIN);
-    eprintln!("{}", ans);
-    eprintln!("{}", END);
     eprintln!("{}ms", system_time.elapsed().unwrap().as_millis());
 }
