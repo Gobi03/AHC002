@@ -23,6 +23,9 @@ const DIV: isize = 10;
 const W: isize = SIDE as isize;
 const H: isize = SIDE as isize;
 
+const BEGIN: &str = "-----BEGIN-----";
+const END: &str = "-----END-----";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Coord {
     x: isize,
@@ -52,7 +55,6 @@ impl Coord {
     }
 
     fn mk_4dir(&self) -> Vec<Self> {
-        let (ix, iy) = self.to_pair();
         let delta = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
         delta
@@ -293,5 +295,8 @@ fn main() {
 
     println!("{}", ans);
 
+    eprintln!("{}", BEGIN);
+    eprintln!("{}", ans);
+    eprintln!("{}", END);
     eprintln!("{}ms", system_time.elapsed().unwrap().as_millis());
 }
