@@ -165,15 +165,15 @@ impl Output {
     }
 
     fn solve(&self, sys_time: &SystemTime) -> String {
-        let mut reprs = vec![State::new(&self.input)];
+        // dfs
+        let dfs_init = State::new(&self.input);
 
-        const TIMEOUT: u128 = 1950;
-        let mut ans = String::from("");
+        const DFS_TIMEOUT: u128 = 200;
+        let mut dfs_ans = dfs_init.clone();
         let mut best_score = 0;
 
-        let mut file_cnt = 0;
-
-        while !reprs.is_empty() && sys_time.elapsed().unwrap().as_millis() < TIMEOUT {
+        let mut reprs = vec![dfs_init];
+        while !reprs.is_empty() && sys_time.elapsed().unwrap().as_millis() < DFS_TIMEOUT {
             for _ in 0..500 {
                 if reprs.is_empty() {
                     break;
@@ -190,19 +190,7 @@ impl Output {
 
                             if best_score < next_st.score {
                                 best_score = next_st.score;
-                                ans = next_st.ans.iter().collect::<String>();
-
-                                /*
-                                file_cnt += 1;
-                                if file_cnt % 10 == 0 {
-                                    let mut f = fs::File::create(format!(
-                                        "tools/output/{}.txt",
-                                        file_cnt / 10
-                                    ))
-                                    .unwrap();
-                                    f.write_all(ans.as_bytes()).unwrap();
-                                }
-                                */
+                                dfs_ans = next_st.clone();
                             }
 
                             reprs.push(next_st);
@@ -212,9 +200,105 @@ impl Output {
             }
         }
 
-        eprintln!("{}", file_cnt / 10);
+        let mut file_cnt = 1;
 
-        ans
+        let mut f = fs::File::create(format!("tools/output/{}.txt", file_cnt)).unwrap();
+        f.write_all(dfs_ans.ans.iter().collect::<String>().as_bytes())
+            .unwrap();
+
+        // 山登り
+        let mut rng = thread_rng();
+        const CLIMB_TIMEOUT: u128 = 5900;
+
+        let mut res = dfs_ans;
+
+        while sys_time.elapsed().unwrap().as_millis() < CLIMB_TIMEOUT {
+            let mut st = res.clone();
+
+            let ansl = st.ans.len();
+            let l = rng.gen_range(5, min(100, ansl));
+            let si = rng.gen_range(0, ansl);
+
+            // 指定の範囲の操作を抜き出す(中抜きのケースと右端が無いケースがあるのに注意)
+            let mut coms = st.ans.clone();
+            let mut cut = coms.split_off(si);
+            let lasts = cut.split_off(min(cut.len(), l));
+
+            // eprintln!("{:?}", cut);
+
+            let mut pos = self.input.start.clone();
+            for &c in &coms {
+                pos = pos.move_by(c);
+            }
+            // gone を消す & goal地点を求める
+            let mut goal_pos = pos.clone();
+            for &c in &cut {
+                goal_pos = goal_pos.move_by(c);
+                st.set_gone_pos(&goal_pos, false, &self.input);
+                st.score -= goal_pos.access_matrix(&self.input.points);
+            }
+
+            // eprintln!("hoge");
+            // 接続先に向けてルート探索
+            st.ans = coms;
+            st.pos = pos;
+            //eprintln!("{}", st.score);
+            let mut q = vec![st.clone()];
+            for _ in 0..l * 5 {
+                if q.is_empty() {
+                    break;
+                }
+
+                let mut next_q = vec![];
+                if lasts.is_empty() {
+                    let nst = &q[0];
+                    if nst.score > res.score {
+                        let mut hoge = nst.clone();
+                        hoge.ans.append(&mut lasts.clone());
+                        res = hoge;
+
+                        file_cnt += 1;
+                        let mut f =
+                            fs::File::create(format!("tools/output/{}.txt", file_cnt)).unwrap();
+                        f.write_all(res.ans.iter().collect::<String>().as_bytes())
+                            .unwrap();
+                    }
+                }
+
+                for k in 0..min(q.len(), 300) {
+                    let nst = &q[k];
+                    if lasts.is_empty() && nst.pos == goal_pos {
+                        eprintln!("{} {}", res.score, nst.score);
+                        if nst.score > res.score || true {
+                            let mut hoge = nst.clone();
+                            hoge.ans.append(&mut lasts.clone());
+                            res = hoge;
+
+                            file_cnt += 1;
+                            let mut f =
+                                fs::File::create(format!("tools/output/{}.txt", file_cnt)).unwrap();
+                            f.write_all(res.ans.iter().collect::<String>().as_bytes())
+                                .unwrap();
+                        }
+                    } else {
+                        for &c in &COMS {
+                            let mut next_st = nst.clone();
+                            let next_pos = next_st.pos.move_by(c);
+                            if next_pos.in_field() && !next_st.is_gone_pos(&next_pos, &self.input) {
+                                next_st.do_command(c, &self.input);
+                                next_q.push(next_st);
+                            }
+                        }
+                    }
+                }
+
+                next_q.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
+                q = next_q;
+            }
+        }
+
+        eprintln!("{}", file_cnt);
+        res.ans.iter().collect::<String>()
     }
 }
 
@@ -243,6 +327,11 @@ impl State {
     fn is_gone_pos(&self, pos: &Coord, input: &Input) -> bool {
         let tile = pos.access_matrix(&input.tiles);
         self.gone[*tile]
+    }
+
+    fn set_gone_pos(&mut self, pos: &Coord, b: bool, input: &Input) {
+        let tile = pos.access_matrix(&input.tiles);
+        self.gone[*tile] = b;
     }
 
     // valid な命令である前提
