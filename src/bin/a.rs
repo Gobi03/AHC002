@@ -21,7 +21,7 @@ use std::io::Write;
 const MOD: usize = 1e9 as usize + 7;
 
 const SIDE: usize = 50;
-const COMS: [char; 4] = ['U', 'D', 'L', 'R'];
+const COMS: [char; 4] = ['U', 'L', 'D', 'R'];
 const DIV: isize = 10;
 const W: isize = SIDE as isize;
 const H: isize = SIDE as isize;
@@ -174,29 +174,39 @@ impl Output {
         let mut file_cnt = 0;
 
         while !reprs.is_empty() && sys_time.elapsed().unwrap().as_millis() < TIMEOUT {
-            let now = reprs.pop().unwrap();
+            for _ in 0..500 {
+                if reprs.is_empty() {
+                    break;
+                }
 
-            for &c in COMS.iter() {
-                let next = now.pos.move_by(c);
-                if next.in_field() {
-                    if !now.is_gone_pos(&next, &self.input) {
-                        let mut next_st = now.clone();
-                        next_st.do_command(c, &self.input);
+                let now = reprs.pop().unwrap();
 
-                        if best_score < next_st.score {
-                            best_score = next_st.score;
-                            ans = next_st.ans.iter().collect::<String>();
+                for &c in COMS.iter() {
+                    let next = now.pos.move_by(c);
+                    if next.in_field() {
+                        if !now.is_gone_pos(&next, &self.input) {
+                            let mut next_st = now.clone();
+                            next_st.do_command(c, &self.input);
 
-                            file_cnt += 1;
-                            if file_cnt % 10 == 0 {
-                                let mut f =
-                                    fs::File::create(format!("tools/output/{}.txt", file_cnt / 10))
-                                        .unwrap();
-                                f.write_all(ans.as_bytes()).unwrap();
+                            if best_score < next_st.score {
+                                best_score = next_st.score;
+                                ans = next_st.ans.iter().collect::<String>();
+
+                                /*
+                                file_cnt += 1;
+                                if file_cnt % 10 == 0 {
+                                    let mut f = fs::File::create(format!(
+                                        "tools/output/{}.txt",
+                                        file_cnt / 10
+                                    ))
+                                    .unwrap();
+                                    f.write_all(ans.as_bytes()).unwrap();
+                                }
+                                */
                             }
-                        }
 
-                        reprs.push(next_st);
+                            reprs.push(next_st);
+                        }
                     }
                 }
             }
