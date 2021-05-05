@@ -164,79 +164,46 @@ impl Output {
         Output { input, rng }
     }
 
-    fn solve(&self) -> String {
-        let start_block = self.input.start.block_coord();
-        let end_block = Coord::new((SIDE as isize / DIV - 1, SIDE as isize / DIV - 1));
-        let super_block1 = Coord::new((SIDE as isize / DIV - 1 - 1, SIDE as isize / DIV - 1));
-        let super_block2 = Coord::new((SIDE as isize / DIV - 1, SIDE as isize / DIV - 1 - 1));
-        let a = start_block != end_block;
-
+    fn solve(&self, sys_time: &SystemTime) -> String {
         let mut reprs = vec![State::new(&self.input)];
 
+        const TIMEOUT: u128 = 1950;
         let mut ans = String::from("");
         let mut best_score = 0;
 
-        const BEAM_WIDTH: usize = 300;
+        let mut file_cnt = 0;
 
-        let mut loop_cnt = 0;
+        while !reprs.is_empty() && sys_time.elapsed().unwrap().as_millis() < TIMEOUT {
+            let now = reprs.pop().unwrap();
 
-        while !reprs.is_empty() {
-            loop_cnt += 1;
+            for &c in COMS.iter() {
+                let next = now.pos.move_by(c);
+                if next.in_field() {
+                    if !now.is_gone_pos(&next, &self.input) {
+                        let mut next_st = now.clone();
+                        next_st.do_command(c, &self.input);
 
-            let top = &reprs[0];
-            let mut already = vec![vec![false; DIV as usize]; DIV as usize];
+                        if best_score < next_st.score {
+                            best_score = next_st.score;
+                            ans = next_st.ans.iter().collect::<String>();
 
-            let block = top.pos.block_coord();
-            already[block.y as usize][block.x as usize] = true;
-            let next_block = block.next_block();
-
-            let mut next_reprs = vec![];
-
-            let mut local_reprs = reprs.clone();
-            while !local_reprs.is_empty() {
-                let top = &local_reprs[0];
-                if best_score < top.score {
-                    best_score = top.score;
-                    ans = top.ans.iter().collect::<String>();
-                }
-                //eprintln!("{}", local_reprs.len());
-                let mut local_next_reprs = vec![];
-                for i in 0..min(BEAM_WIDTH, local_reprs.len()) {
-                    let st = &local_reprs[i];
-                    for &c in COMS.iter() {
-                        let next = st.pos.move_by(c);
-                        if next.in_field() {
-                            if !st.is_gone_pos(&next, &self.input) {
-                                let mut next_st = st.clone();
-                                next_st.do_command(c, &self.input);
-
-                                let next_stbc = next_st.pos.block_coord();
-                                if next_stbc == next_block {
-                                    next_reprs.push(next_st);
-                                } else if already[next_stbc.y as usize][next_stbc.x as usize] {
-                                    local_next_reprs.push(next_st);
-                                } else if a
-                                    && (block == super_block1 || block == super_block2)
-                                    && next_st.pos.block_coord() == end_block
-                                {
-                                    local_next_reprs.push(next_st);
-                                }
+                            file_cnt += 1;
+                            if file_cnt % 10 == 0 {
+                                let mut f =
+                                    fs::File::create(format!("tools/output/{}.txt", file_cnt / 10))
+                                        .unwrap();
+                                f.write_all(ans.as_bytes()).unwrap();
                             }
                         }
+
+                        reprs.push(next_st);
                     }
                 }
-                local_next_reprs.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
-                local_reprs = local_next_reprs;
             }
-
-            next_reprs.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
-            reprs = next_reprs;
-
-            let mut f = fs::File::create(format!("tools/output/{}.txt", loop_cnt)).unwrap();
-            f.write_all(ans.as_bytes()).unwrap();
         }
 
-        eprintln!("file num: {}", loop_cnt);
+        eprintln!("{}", file_cnt / 10);
+
         ans
     }
 }
@@ -299,7 +266,7 @@ fn main() {
 
     let output = Output::new(input);
 
-    let ans = output.solve();
+    let ans = output.solve(&system_time);
 
     println!("{}", ans);
 
