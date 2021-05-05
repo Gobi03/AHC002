@@ -216,8 +216,8 @@ impl Output {
             let mut st = res.clone();
 
             let ansl = st.ans.len();
-            let l = rng.gen_range(5, min(100, ansl));
-            let si = rng.gen_range(0, ansl);
+            let l = rng.gen_range(5, 100);
+            let si = rng.gen_range(0, ansl - l);
 
             // 指定の範囲の操作を抜き出す(中抜きのケースと右端が無いケースがあるのに注意)
             let mut coms = st.ans.clone();
@@ -265,11 +265,11 @@ impl Output {
                     }
                 }
 
-                for k in 0..min(q.len(), 300) {
+                for k in 0..min(q.len(), 500) {
                     let nst = &q[k];
-                    if lasts.is_empty() && nst.pos == goal_pos {
-                        eprintln!("{} {}", res.score, nst.score);
-                        if nst.score > res.score || true {
+                    if !lasts.is_empty() && nst.pos == goal_pos {
+                        if nst.score > res.score {
+                            // eprintln!("{} {} {}", si, res.score, nst.score);
                             let mut hoge = nst.clone();
                             hoge.ans.append(&mut lasts.clone());
                             res = hoge;
