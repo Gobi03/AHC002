@@ -1,6 +1,8 @@
 /target
 Cargo.lock
 
+movie.html
+
 /tools/**/*.txt
 /tools/*.in
 /tools/*.out

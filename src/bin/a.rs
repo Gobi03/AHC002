@@ -176,7 +176,7 @@ impl Output {
         let mut ans = String::from("");
         let mut best_score = 0;
 
-        const BEAM_WIDTH: usize = 1200;
+        const BEAM_WIDTH: usize = 300;
 
         let mut loop_cnt = 0;
 

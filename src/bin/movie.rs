@@ -253,8 +253,15 @@ impl Movie {
 }
 
 fn main() {
+    if std::env::args().len() != 2 {
+        eprintln!("Usage: {} <file_num>", std::env::args().nth(0).unwrap());
+        return;
+    }
+
+    let file_num: usize = std::env::args().nth(1).unwrap().parse().unwrap();
+
     let mut mov = Movie::new();
-    for i in 1..=24 {
+    for i in 1..=file_num {
         mov.add_file(String::from(format!("tools/out/{}.svg", i)));
     }
 
