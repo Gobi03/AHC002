@@ -236,13 +236,15 @@ impl Output {
         }
 
         let mut file_cnt = 1;
+        /*
         let mut f = fs::File::create(format!("tools/output/{}.txt", file_cnt)).unwrap();
         f.write_all(beam_ans.ans.iter().collect::<String>().as_bytes())
             .unwrap();
+            */
 
         // 山登り
         let mut rng = thread_rng();
-        const CLIMB_TIMEOUT: u128 = 5900;
+        const CLIMB_TIMEOUT: u128 = 1900;
         let mut res = beam_ans;
         while sys_time.elapsed().unwrap().as_millis() < CLIMB_TIMEOUT {
             let mut st = res.clone();
@@ -295,10 +297,12 @@ impl Output {
                             res = hoge;
                             file_cnt += 1;
 
+                            /*
                             let mut f =
                                 fs::File::create(format!("tools/output/{}.txt", file_cnt)).unwrap();
                             f.write_all(res.ans.iter().collect::<String>().as_bytes())
                                 .unwrap();
+                                */
                         }
                     } else {
                         for &c in &COMS {
