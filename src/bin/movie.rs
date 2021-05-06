@@ -234,7 +234,7 @@ impl Movie {
 				f.style.display = \"none\";
 			}
 			let currentFrame = 0;
-			let playing = true;
+			let playing = false;
 			setInterval(() => {
 				if (!playing) return;
 				text.innerText = (currentFrame + 1) + \" / \" + numFrames;

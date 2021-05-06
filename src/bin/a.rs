@@ -164,17 +164,19 @@ impl Output {
         Output { input, rng }
     }
 
-    fn solve(&self) -> String {
+    fn solve(&self, sys_time: &SystemTime) -> String {
         let start_block = self.input.start.block_coord();
         let end_block = Coord::new((SIDE as isize / DIV - 1, SIDE as isize / DIV - 1));
         let super_block1 = Coord::new((SIDE as isize / DIV - 1 - 1, SIDE as isize / DIV - 1));
         let super_block2 = Coord::new((SIDE as isize / DIV - 1, SIDE as isize / DIV - 1 - 1));
         let a = start_block != end_block;
 
-        let mut reprs = vec![State::new(&self.input)];
+        let init = State::new(&self.input);
 
-        let mut ans = String::from("");
+        let mut beam_ans = init.clone();
         let mut best_score = 0;
+
+        let mut reprs = vec![init];
 
         const BEAM_WIDTH: usize = 300;
 
@@ -197,7 +199,7 @@ impl Output {
                 let top = &local_reprs[0];
                 if best_score < top.score {
                     best_score = top.score;
-                    ans = top.ans.iter().collect::<String>();
+                    beam_ans = top.clone();
                 }
                 //eprintln!("{}", local_reprs.len());
                 let mut local_next_reprs = vec![];
@@ -231,13 +233,91 @@ impl Output {
 
             next_reprs.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
             reprs = next_reprs;
-
-            let mut f = fs::File::create(format!("tools/output/{}.txt", loop_cnt)).unwrap();
-            f.write_all(ans.as_bytes()).unwrap();
         }
 
-        eprintln!("file num: {}", loop_cnt);
-        ans
+        let mut file_cnt = 1;
+        let mut f = fs::File::create(format!("tools/output/{}.txt", file_cnt)).unwrap();
+        f.write_all(beam_ans.ans.iter().collect::<String>().as_bytes())
+            .unwrap();
+
+        // 山登り
+        let mut rng = thread_rng();
+        const CLIMB_TIMEOUT: u128 = 5900;
+        let mut res = beam_ans;
+        while sys_time.elapsed().unwrap().as_millis() < CLIMB_TIMEOUT {
+            let mut st = res.clone();
+            let ansl = st.ans.len();
+            let l = rng.gen_range(5, 100);
+            let si = rng.gen_range(0, ansl - l);
+            // 指定の範囲の操作を抜き出す(中抜きのケースと右端が無いケースがあるのに注意)
+            let mut coms = st.ans.clone();
+            let mut cut = coms.split_off(si);
+            let lasts = cut.split_off(min(cut.len(), l));
+            // eprintln!("{:?}", cut);
+            let mut pos = self.input.start.clone();
+            for &c in &coms {
+                pos = pos.move_by(c);
+            }
+            // gone を消す & goal地点を求める
+            let mut goal_pos = pos.clone();
+            for &c in &cut {
+                goal_pos = goal_pos.move_by(c);
+                st.set_gone_pos(&goal_pos, false, &self.input);
+                st.score -= goal_pos.access_matrix(&self.input.points);
+            }
+            // eprintln!("hoge");
+            // 接続先に向けてルート探索
+            st.ans = coms;
+            st.pos = pos;
+            //eprintln!("{}", st.score);
+            let mut q = vec![st.clone()];
+            for _ in 0..l * 5 {
+                if q.is_empty() {
+                    break;
+                }
+                let mut next_q = vec![];
+                if lasts.is_empty() {
+                    let nst = &q[0];
+                    if nst.score > res.score {
+                        let mut hoge = nst.clone();
+                        hoge.ans.append(&mut lasts.clone());
+                        res = hoge;
+                        file_cnt += 1;
+                    }
+                }
+                for k in 0..min(q.len(), 500) {
+                    let nst = &q[k];
+                    if !lasts.is_empty() && nst.pos == goal_pos {
+                        if nst.score > res.score {
+                            // eprintln!("{} {} {}", si, res.score, nst.score);
+                            let mut hoge = nst.clone();
+                            hoge.ans.append(&mut lasts.clone());
+                            res = hoge;
+                            file_cnt += 1;
+
+                            let mut f =
+                                fs::File::create(format!("tools/output/{}.txt", file_cnt)).unwrap();
+                            f.write_all(res.ans.iter().collect::<String>().as_bytes())
+                                .unwrap();
+                        }
+                    } else {
+                        for &c in &COMS {
+                            let mut next_st = nst.clone();
+                            let next_pos = next_st.pos.move_by(c);
+                            if next_pos.in_field() && !next_st.is_gone_pos(&next_pos, &self.input) {
+                                next_st.do_command(c, &self.input);
+                                next_q.push(next_st);
+                            }
+                        }
+                    }
+                }
+                next_q.sort_by(|st1, st2| st2.score.partial_cmp(&st1.score).unwrap());
+                q = next_q;
+            }
+        }
+
+        eprintln!("file num: {}", file_cnt);
+        res.ans.iter().collect::<String>()
     }
 }
 
@@ -277,6 +357,11 @@ impl State {
         let tile = self.pos.access_matrix(&input.tiles);
         self.gone[*tile] = true;
     }
+
+    fn set_gone_pos(&mut self, pos: &Coord, b: bool, input: &Input) {
+        let tile = pos.access_matrix(&input.tiles);
+        self.gone[*tile] = b;
+    }
 }
 
 #[fastout]
@@ -299,7 +384,7 @@ fn main() {
 
     let output = Output::new(input);
 
-    let ans = output.solve();
+    let ans = output.solve(&system_time);
 
     println!("{}", ans);
 
